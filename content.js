@@ -1,24 +1,49 @@
-function extractMembers() {
+async function extractWhatsAppGroupMembers() {
 
     const members = [];
+    const added = new Set();
 
-    const addedNumbers = new Set();
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
 
-    document.querySelectorAll("span[title]").forEach(el => {
+    async function autoScroll() {
 
-        const text = el.getAttribute("title");
+        const scrollBox = document.querySelector('[role="application"]');
 
-        if (/^\+?\d[\d\s]+$/.test(text)) {
+        if (!scrollBox) return;
 
-            const number = text.trim();
+        for (let i = 0; i < 30; i++) {
 
-            if (!addedNumbers.has(number)) {
+            scrollBox.scrollBy(0, 1000);
 
-                addedNumbers.add(number);
+            await sleep(500);
+        }
+    }
+
+    await autoScroll();
+
+    const allSpans = document.querySelectorAll("span");
+
+    allSpans.forEach(span => {
+
+        const text = span.innerText?.trim();
+
+        if (!text) return;
+
+        const phoneRegex = /\+\d[\d\s]{7,15}/;
+
+        if (phoneRegex.test(text)) {
+
+            const number = text.match(phoneRegex)[0];
+
+            if (!added.has(number)) {
+
+                added.add(number);
 
                 let name = "No Name";
 
-                const parent = el.parentElement;
+                const parent = span.closest("div");
 
                 if (parent) {
 
@@ -26,21 +51,21 @@ function extractMembers() {
 
                     spans.forEach(s => {
 
-                        const possibleName = s.getAttribute("title");
+                        const t = s.innerText?.trim();
 
                         if (
-                            possibleName &&
-                            possibleName !== number &&
-                            !possibleName.includes("+")
+                            t &&
+                            t !== number &&
+                            !t.includes("+")
                         ) {
-                            name = possibleName;
+                            name = t;
                         }
                     });
                 }
 
                 members.push({
-                    name: name,
-                    number: number
+                    name,
+                    number
                 });
             }
         }
@@ -48,10 +73,17 @@ function extractMembers() {
 
     console.log(members);
 
+    if (members.length === 0) {
+
+        alert("No members found! Open group info and scroll members list.");
+
+        return;
+    }
+
     let csv = "Name,Number\n";
 
-    members.forEach(member => {
-        csv += `"${member.name}","${member.number}"\n`;
+    members.forEach(m => {
+        csv += `"${m.name}","${m.number}"\n`;
     });
 
     const blob = new Blob([csv], {
@@ -66,7 +98,11 @@ function extractMembers() {
 
     a.click();
 
-    alert("Excel CSV Downloaded!");
+    alert(`Downloaded ${members.length} members!`);
 }
 
-setTimeout(extractMembers, 5000);
+setTimeout(() => {
+
+    extractWhatsAppGroupMembers();
+
+}, 5000);
