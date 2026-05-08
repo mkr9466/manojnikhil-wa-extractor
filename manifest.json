@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "WhatsApp Number Extractor",
+  "version": "1.0",
+  "description": "Extract WhatsApp group numbers",
+  "permissions": ["activeTab", "scripting"],
+  "content_scripts": [
+    {
+      "matches": ["https://web.whatsapp.com/*"],
+      "js": ["content.js"]
+    }
+  ]
+}
