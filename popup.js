@@ -27,21 +27,40 @@ async function extractMembers() {
         return;
     }
 
-    let scrollBox = popup.parentElement;
+    // CORRECT SCROLL CONTAINER
+    let scrollContainer = popup.closest("div[tabindex='-1']");
 
-    for (let i = 0; i < 20; i++) {
-
-        scrollBox.scrollBy(0, 1000);
-
-        await sleep(700);
+    if (!scrollContainer) {
+        scrollContainer = popup.parentElement;
     }
+
+    let lastHeight = 0;
+
+    // AUTO SCROLL
+    for (let i = 0; i < 50; i++) {
+
+        scrollContainer.scrollBy(0, 2000);
+
+        await sleep(1000);
+
+        const newHeight = scrollContainer.scrollHeight;
+
+        if (newHeight === lastHeight) {
+            break;
+        }
+
+        lastHeight = newHeight;
+    }
+
+    // EXTRA WAIT
+    await sleep(2000);
 
     const members = [];
     const added = new Set();
 
-    const rows = document.querySelectorAll("div[role='listitem']");
+    const allText = document.querySelectorAll("div[role='listitem']");
 
-    rows.forEach(row => {
+    allText.forEach(row => {
 
         const text = row.innerText;
 
@@ -61,8 +80,11 @@ async function extractMembers() {
 
         let name = "No Name";
 
-        if (lines[0] && !lines[0].includes("+")) {
-            name = lines[0];
+        if (
+            lines[0] &&
+            !lines[0].includes("+")
+        ) {
+            name = lines[0].trim();
         }
 
         members.push({
@@ -71,11 +93,20 @@ async function extractMembers() {
         });
     });
 
+    console.log(members);
+
+    if (members.length === 0) {
+
+        alert("No members found!");
+
+        return;
+    }
+
     let csv = "Name,Number\n";
 
-    members.forEach(m => {
+    members.forEach(member => {
 
-        csv += `"${m.name}","${m.number}"\n`;
+        csv += `"${member.name}","${member.number}"\n`;
 
     });
 
