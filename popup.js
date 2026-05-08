@@ -1,3 +1,10 @@
+# popup.js — FINAL VERSION
+
+पूरा पुराना `popup.js` delete करके यह पूरा code paste करो 👇
+
+```javascript
+// BUTTON CLICK
+
 document.getElementById("extract").addEventListener("click", async () => {
 
     const [tab] = await chrome.tabs.query({
@@ -12,11 +19,17 @@ document.getElementById("extract").addEventListener("click", async () => {
 
 });
 
+
+// MAIN FUNCTION
+
 async function extractMembers() {
 
     function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
+
+
+    // FIND MEMBERS POPUP
 
     const popup = document.querySelector('[aria-label="Search members"]');
 
@@ -27,58 +40,84 @@ async function extractMembers() {
         return;
     }
 
-    // CORRECT SCROLL CONTAINER
-    let scrollContainer = popup.closest("div[tabindex='-1']");
+
+    // FIND REAL SCROLL AREA
+
+    let scrollContainer = popup.closest('[role="dialog"]');
 
     if (!scrollContainer) {
+
         scrollContainer = popup.parentElement;
     }
 
-    let lastHeight = 0;
 
-    // AUTO SCROLL
-    for (let i = 0; i < 50; i++) {
+    // SCROLL TO LOAD ALL MEMBERS
 
-        scrollContainer.scrollBy(0, 2000);
+    let previousScrollTop = -1;
 
-        await sleep(1000);
+    for (let i = 0; i < 100; i++) {
 
-        const newHeight = scrollContainer.scrollHeight;
+        scrollContainer.scrollTop += 3000;
 
-        if (newHeight === lastHeight) {
+        await sleep(1200);
+
+        // STOP WHEN NO MORE SCROLL
+
+        if (scrollContainer.scrollTop === previousScrollTop) {
             break;
         }
 
-        lastHeight = newHeight;
+        previousScrollTop = scrollContainer.scrollTop;
     }
 
-    // EXTRA WAIT
-    await sleep(2000);
+
+    // EXTRA WAIT FOR WHATSAPP TO LOAD MEMBERS
+
+    await sleep(3000);
+
+
+    // EXTRACT MEMBERS
 
     const members = [];
+
     const added = new Set();
 
-    const allText = document.querySelectorAll("div[role='listitem']");
 
-    allText.forEach(row => {
+    // GET ALL VISIBLE TEXT BLOCKS
+
+    const rows = document.querySelectorAll("div[role='listitem']");
+
+
+    rows.forEach(row => {
 
         const text = row.innerText;
 
         if (!text) return;
 
-        const phoneMatch = text.match(/\+\d[\d\s]{7,15}/);
+
+        // FIND PHONE NUMBER
+
+        const phoneMatch = text.match(/\+\d[\d\s]{7,20}/);
 
         if (!phoneMatch) return;
 
-        const number = phoneMatch[0].trim();
+
+        const number = phoneMatch[0].replace(/\s+/g, "").trim();
+
+
+        // REMOVE DUPLICATES
 
         if (added.has(number)) return;
 
         added.add(number);
 
+
+        // GET NAME
+
         const lines = text.split("\n");
 
         let name = "No Name";
+
 
         if (
             lines[0] &&
@@ -87,13 +126,21 @@ async function extractMembers() {
             name = lines[0].trim();
         }
 
+
         members.push({
             name,
             number
         });
+
     });
 
+
+    console.log("TOTAL MEMBERS:", members.length);
+
     console.log(members);
+
+
+    // IF NOTHING FOUND
 
     if (members.length === 0) {
 
@@ -102,7 +149,11 @@ async function extractMembers() {
         return;
     }
 
+
+    // CREATE CSV
+
     let csv = "Name,Number\n";
+
 
     members.forEach(member => {
 
@@ -110,9 +161,13 @@ async function extractMembers() {
 
     });
 
+
+    // DOWNLOAD FILE
+
     const blob = new Blob([csv], {
         type: "text/csv"
     });
+
 
     const a = document.createElement("a");
 
@@ -120,7 +175,36 @@ async function extractMembers() {
 
     a.download = "whatsapp_members.csv";
 
+    document.body.appendChild(a);
+
     a.click();
+
+    document.body.removeChild(a);
+
 
     alert(`Downloaded ${members.length} members`);
 }
+```
+
+# IMPORTANT 😄
+
+इसके बाद ये 3 चीजें जरूर करो:
+
+## 1. SAVE करो
+
+## 2. Chrome में जाओ
+
+```text
+chrome://extensions
+```
+
+## 3. Reload दबाओ 🔄
+
+फिर:
+
+* WhatsApp Web refresh
+* Group open
+* View all members
+* Extract Members
+
+अब auto scroll होना चाहिए और सारे members आने चाहिए 🙂
