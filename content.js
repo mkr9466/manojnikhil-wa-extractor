@@ -1,89 +1,92 @@
-async function extractWhatsAppGroupMembers() {
-
-    const members = [];
-    const added = new Set();
+async function startExtractor() {
 
     function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    async function autoScroll() {
+    async function autoScrollMembers() {
 
-        const scrollBox = document.querySelector('[role="application"]');
+        const popup = document.querySelector('[aria-label="Search members"]');
 
-        if (!scrollBox) return;
+        if (!popup) {
+            alert("Open members popup first!");
+            return false;
+        }
 
-        for (let i = 0; i < 30; i++) {
+        let scrollBox = popup.parentElement;
+
+        for (let i = 0; i < 15; i++) {
 
             scrollBox.scrollBy(0, 1000);
 
-            await sleep(500);
+            await sleep(700);
         }
+
+        return true;
     }
 
-    await autoScroll();
+    const ok = await autoScrollMembers();
 
-    const allSpans = document.querySelectorAll("span");
+    if (!ok) return;
 
-    allSpans.forEach(span => {
+    const members = [];
+    const added = new Set();
 
-        const text = span.innerText?.trim();
+    const rows = document.querySelectorAll("div[role='listitem']");
+
+    rows.forEach(row => {
+
+        const text = row.innerText;
 
         if (!text) return;
 
-        const phoneRegex = /\+\d[\d\s]{7,15}/;
+        const phoneMatch = text.match(/\+\d[\d\s]{7,15}/);
 
-        if (phoneRegex.test(text)) {
+        if (!phoneMatch) return;
 
-            const number = text.match(phoneRegex)[0];
+        const number = phoneMatch[0].trim();
 
-            if (!added.has(number)) {
+        if (added.has(number)) return;
 
-                added.add(number);
+        added.add(number);
 
-                let name = "No Name";
+        const lines = text.split("\n");
 
-                const parent = span.closest("div");
+        let name = "No Name";
 
-                if (parent) {
+        if (lines.length > 0) {
 
-                    const spans = parent.querySelectorAll("span");
+            const firstLine = lines[0].trim();
 
-                    spans.forEach(s => {
-
-                        const t = s.innerText?.trim();
-
-                        if (
-                            t &&
-                            t !== number &&
-                            !t.includes("+")
-                        ) {
-                            name = t;
-                        }
-                    });
-                }
-
-                members.push({
-                    name,
-                    number
-                });
+            if (
+                firstLine &&
+                !firstLine.includes("+")
+            ) {
+                name = firstLine;
             }
         }
+
+        members.push({
+            name,
+            number
+        });
     });
 
     console.log(members);
 
     if (members.length === 0) {
 
-        alert("No members found! Open group info and scroll members list.");
+        alert("No members detected!");
 
         return;
     }
 
     let csv = "Name,Number\n";
 
-    members.forEach(m => {
-        csv += `"${m.name}","${m.number}"\n`;
+    members.forEach(member => {
+
+        csv += `"${member.name}","${member.number}"\n`;
+
     });
 
     const blob = new Blob([csv], {
@@ -98,11 +101,11 @@ async function extractWhatsAppGroupMembers() {
 
     a.click();
 
-    alert(`Downloaded ${members.length} members!`);
+    alert(`Downloaded ${members.length} members`);
 }
 
 setTimeout(() => {
 
-    extractWhatsAppGroupMembers();
+    startExtractor();
 
 }, 5000);
